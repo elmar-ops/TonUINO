@@ -421,7 +421,8 @@ uint8_t cardcheck = 0x00;
 bool cardPresent = false;
 
 //HW Interupts
-#define INT_PIN 2
+#define INT_PIN2 2
+#define INT_PIN3 3
 
 
 // ################################################################################################################################################################
@@ -443,7 +444,8 @@ void shutdownTimer(uint8_t timerAction);
 void preferences(uint8_t preferenceAction);
 uint8_t prompt(uint8_t promptOptions, uint16_t promptHeading, uint16_t promptOffset, uint8_t promptCurrent, uint8_t promptFolder, bool promptPreview, bool promptChangeVolume);
 void parentsMenu();
-void INT_PINisr(void); // Interupt ISR
+void INT_PIN2isr(void); // Interupt ISR
+void INT_PIN3isr(void); // Interupt ISR
 #if defined PINCODE
 bool enterPinCode();
 #endif
@@ -838,7 +840,8 @@ void loop() {
                     // resume from eeprom
                     else {
                       playback.playListItem = storedTrack;
-                      Serial.print(F("resume "));
+                      Serial.print(F("resume:"));
+                      Serial.print(playback.playListItem);
                     }
                     break;
                   }
@@ -1624,7 +1627,8 @@ void shutdownTimer(uint8_t timerAction) {
 #endif
         Serial.println("sleep ...");
         delay(1000); // we need to empty the serial que
-        attachInterrupt(0, INT_PINisr, LOW);  // HW Key for wakeup normaly Up and Down key
+        attachInterrupt(digitalPinToInterrupt(2), INT_PIN2isr, LOW);  // HW Key for wakeup normaly Up and Down key
+        attachInterrupt(digitalPinToInterrupt(3), INT_PIN3isr, LOW);  // HW Key for wakeup normaly Up and Down key
         mfrc522.PCD_AntennaOff();
         mfrc522.PCD_SoftPowerDown();
         //mp3.sleep();
@@ -1637,6 +1641,7 @@ void shutdownTimer(uint8_t timerAction) {
         Serial.println("Bin aufgewacht ...");
         mfrc522.PCD_AntennaOn();
         mfrc522.PCD_SoftPowerUp();
+        delay(1000);
         break;
       }
     default: {
@@ -2302,9 +2307,16 @@ void handleButtons() {
   // #######################################################################################
 }
 
-void INT_PINisr(void)
+void INT_PIN2isr(void)
 /* ISR fuer Pin 2 */
 {
   /* detach Interrupt, damit er nur einmal auftritt */
   detachInterrupt(0);
+}
+
+void INT_PIN3isr(void)
+/* ISR fuer Pin 2 */
+{
+  /* detach Interrupt, damit er nur einmal auftritt */
+  detachInterrupt(1);
 }
