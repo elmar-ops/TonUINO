@@ -1004,8 +1004,7 @@ void loop() {
     Serial.println();
     Serial.println("CardRemoved");
     mp3.pause();
-    //timer.enable(pwrmgmttimer);
-    delay(500); //change value if you want to read cards faster
+    delay(50); //change value if you want to read cards faster
 
     mfrc522.PICC_HaltA();
     mfrc522.PCD_StopCrypto1();
@@ -1310,6 +1309,7 @@ void playNextTrack(uint16_t globalTrack, bool directionForward, bool triggeredMa
       lastCallTrack = 0;
       printModeFolderTrack(true);
       mp3.playFolderTrack(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
+      Serial.println("save progess");
     }
     else {
       playback.playListMode = false;
@@ -1359,6 +1359,12 @@ void playNextTrack(uint16_t globalTrack, bool directionForward, bool triggeredMa
         playback.playListItem++;
         printModeFolderTrack(true);
         mp3.playFolderTrack(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
+		if  (playback.currentTag.mode == STORYBOOK)
+	    {
+	      Serial.println("save progress");
+		  EEPROM.update(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
+		}
+		delay(500); //get busy
       }
       // there are no more tracks after the current one
       else {
