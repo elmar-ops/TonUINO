@@ -727,12 +727,7 @@ void loop() {
   // ################################################################################
   // # main code block, if nfc tag is detected and TonUINO is not locked do something
   if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial() && !playback.isLocked) {
-    // if the current playback mode is story book mode, only while playing: store the current progress
-    if (playback.currentTag.mode == STORYBOOK && playback.isPlaying) {
-      Serial.print(F("save "));
-      printModeFolderTrack(true);
-      EEPROM.update(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
-    }
+
 
     uint8_t readNfcTagStatus = readNfcTagData(false);
 
@@ -769,11 +764,29 @@ void loop() {
 
           randomSeed(micros());
 
-          if (playback.resumePlay)
+          
+
+          if (playback.resumePlay) // If was paused
           {
-            // If was paused
-            mp3.start();
-            playback.resumePlay = false;
+            switch (playback.currentTag.mode) {
+              case STORY: {}
+              case ALBUM: {}
+              case PARTY: {}
+              case SINGLE: {}
+              case STORYBOOK: {
+                  mp3.start();
+                  playback.resumePlay = false;
+                  break;
+                }
+              case VSTORY: {}
+              case VALBUM: {}
+              case VPARTY: {
+                  break;
+                }
+              default: {
+                  break;
+                }
+            }
           }
           else
           {
@@ -1333,6 +1346,13 @@ void playNextTrack(uint16_t globalTrack, bool directionForward, bool triggeredMa
         lastCallTrack = 0;
         printModeFolderTrack(true);
         mp3.playFolderTrack(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
+		// if the current playback mode is story book mode, only while playing: store the current progress
+		if  (playback.currentTag.mode == STORYBOOK)
+	    {
+		  Serial.print(F("save "));
+		  printModeFolderTrack(true);
+          EEPROM.update(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
+        }
       }
       // there are more tracks after the current one, play next track
       else if (playback.playListItem < playback.playListItemCount) {
@@ -1634,14 +1654,15 @@ void shutdownTimer(uint8_t timerAction) {
         //mp3.sleep();
         set_sleep_mode(SLEEP_MODE_PWR_DOWN);
         sleep_enable();
-        sleep_mode();
-        sleep_disable();
-        delay(1000);
+        sleep_mode(); //sleep
         
+        sleep_disable(); // wakup
+        shutdownTimer(START); // start timer to avoid direct sleep
+        delay(1000);
         Serial.println("Bin aufgewacht ...");
         mfrc522.PCD_AntennaOn();
         mfrc522.PCD_SoftPowerUp();
-        delay(1000);
+        
         break;
       }
     default: {
@@ -2312,6 +2333,7 @@ void INT_PIN2isr(void)
 {
   /* detach Interrupt, damit er nur einmal auftritt */
   detachInterrupt(0);
+  delay(1000);
 }
 
 void INT_PIN3isr(void)
@@ -2319,4 +2341,5 @@ void INT_PIN3isr(void)
 {
   /* detach Interrupt, damit er nur einmal auftritt */
   detachInterrupt(1);
+  delay(1000);
 }
