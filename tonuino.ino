@@ -1388,6 +1388,7 @@ void playNextTrack(uint16_t globalTrack, bool directionForward, bool triggeredMa
       }
     }
   }
+  delay(1000); // we need some time to set the busy flag 
 }
 
 // reads data from nfc tag
