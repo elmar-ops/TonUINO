@@ -446,6 +446,7 @@ uint8_t prompt(uint8_t promptOptions, uint16_t promptHeading, uint16_t promptOff
 void parentsMenu();
 void INT_PIN2isr(void); // Interupt ISR
 void INT_PIN3isr(void); // Interupt ISR
+void mfrc522_fast_Reset(void);
 #if defined PINCODE
 bool enterPinCode();
 #endif
@@ -1667,9 +1668,8 @@ void shutdownTimer(uint8_t timerAction) {
         shutdownTimer(START); // start timer to avoid direct sleep
         delay(1000);
         Serial.println("Bin aufgewacht ...");
-        mfrc522.PCD_AntennaOn();
-        mfrc522.PCD_SoftPowerUp();
-        
+		mfrc522_fast_Reset();
+		delay(50);
         break;
       }
     default: {
@@ -2273,8 +2273,6 @@ void handleButtons() {
   }
   // button 1 (right) press or ir remote up while playing: increase volume
   else if (((inputEvent == B1P && !playback.isLocked) || inputEvent == IRU) && playback.isPlaying) {
-    Serial.println(preference.mp3MaxVolume);
-    Serial.println(playback.mp3CurrentVolume);
     if (playback.mp3CurrentVolume < preference.mp3MaxVolume) {
       mp3.setVolume(++playback.mp3CurrentVolume);
       Serial.print(F("volume "));
@@ -2349,4 +2347,22 @@ void INT_PIN3isr(void)
   /* detach Interrupt, damit er nur einmal auftritt */
   detachInterrupt(1);
   delay(1000);
+}
+
+// Function requires an integer assigned to specific reader, see for loop above.
+void mfrc522_fast_Reset(void) {
+  digitalWrite(nfcResetPin, HIGH);
+  mfrc522.PCD_Reset();
+  mfrc522.PCD_WriteRegister(mfrc522.TModeReg, 0x80);      // TAuto=1; timer starts automatically at the end of the transmission in all communication modes at all speeds
+  mfrc522.PCD_WriteRegister(mfrc522.TPrescalerReg, 0x43);   // 10μs.
+  //  mfrc522.PCD_WriteRegister(mfrc522.TPrescalerReg, 0x20);   // test
+
+  mfrc522.PCD_WriteRegister(mfrc522.TReloadRegH, 0x00);   // Reload timer with 0x064 = 30, ie 0.3ms before timeout.
+  mfrc522.PCD_WriteRegister(mfrc522.TReloadRegL, 0x1E);
+  //mfrc522.PCD_WriteRegister(mfrc522.TReloadRegL, 0x1E);
+
+  mfrc522.PCD_WriteRegister(mfrc522.TxASKReg, 0x40);    // Default 0x00. Force a 100 % ASK modulation independent of the ModGsPReg register setting
+  mfrc522.PCD_WriteRegister(mfrc522.ModeReg, 0x3D);   // Default 0x3F. Set the preset value for the CRC coprocessor for the CalcCRC command to 0x6363 (ISO 14443-3 part 6.2.4)
+
+  mfrc522.PCD_AntennaOn();            // Enable the antenna driver pins TX1 and TX2 (they were disabled by the reset)
 }
