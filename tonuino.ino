@@ -419,6 +419,7 @@ playbackStruct playback;
 preferenceStruct preference;
 uint8_t cardcheck = 0x00;
 bool cardPresent = false;
+int cardCount = 0;
 
 //HW Interupts
 #define INT_PIN2 2
@@ -765,7 +766,7 @@ void loop() {
 
           randomSeed(micros());
 
-          
+
 
           if (playback.resumePlay) // If was paused
           {
@@ -855,7 +856,7 @@ void loop() {
                     else {
                       playback.playListItem = storedTrack;
                       Serial.print(F("resume:"));
-                      Serial.print(playback.playListItem);
+                      Serial.println(playback.playListItem);
                     }
                     break;
                   }
@@ -991,13 +992,25 @@ void loop() {
       if (cardcheck == 13 || cardcheck == 14) {
         //card is still there
         //mp3.loop();
+        cardCount = 0;        
         cardPresent = true;
         handleButtons();
       } /****************************************THIS is the main loop when card is present End****************************************************/
       else {
-        cardPresent = false;
+        if (cardCount > 10) { // versuche 10x mal die Karte zu lesen
+          cardPresent = false;
+        }
+        else {
+          cardCount++;
+          Serial.print("cardCount:");
+          Serial.println(cardCount);
+        }  
+      }
+      
+      if (cardPresent == false) {
         break;
       }
+      
 
     }
     // # end - main code block
@@ -1347,11 +1360,11 @@ void playNextTrack(uint16_t globalTrack, bool directionForward, bool triggeredMa
         lastCallTrack = 0;
         printModeFolderTrack(true);
         mp3.playFolderTrack(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
-		// if the current playback mode is story book mode, only while playing: store the current progress
-		if  (playback.currentTag.mode == STORYBOOK)
-	    {
-		  Serial.print(F("save "));
-		  printModeFolderTrack(true);
+        // if the current playback mode is story book mode, only while playing: store the current progress
+        if  (playback.currentTag.mode == STORYBOOK)
+        {
+          Serial.print(F("save "));
+          printModeFolderTrack(true);
           EEPROM.update(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
         }
       }
@@ -1360,12 +1373,11 @@ void playNextTrack(uint16_t globalTrack, bool directionForward, bool triggeredMa
         playback.playListItem++;
         printModeFolderTrack(true);
         mp3.playFolderTrack(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
-		if  (playback.currentTag.mode == STORYBOOK)
-	    {
-	      Serial.println("save progress");
-		  EEPROM.update(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
-		}
-		delay(500); //get busy
+        if  (playback.currentTag.mode == STORYBOOK)
+        {
+          Serial.println("save progress");
+          EEPROM.update(playback.currentTag.folder, playback.playList[playback.playListItem - 1]);
+        }
       }
       // there are no more tracks after the current one
       else {
@@ -1395,7 +1407,7 @@ void playNextTrack(uint16_t globalTrack, bool directionForward, bool triggeredMa
       }
     }
   }
-  delay(1000); // we need some time to set the busy flag 
+  delay(500); // we need some time to set the busy flag
 }
 
 // reads data from nfc tag
@@ -1663,13 +1675,13 @@ void shutdownTimer(uint8_t timerAction) {
         set_sleep_mode(SLEEP_MODE_PWR_DOWN);
         sleep_enable();
         sleep_mode(); //sleep
-        
+
         sleep_disable(); // wakup
         shutdownTimer(START); // start timer to avoid direct sleep
         delay(1000);
         Serial.println("Bin aufgewacht ...");
-		mfrc522_fast_Reset();
-		delay(50);
+        mfrc522_fast_Reset();
+        delay(50);
         break;
       }
     default: {
